@@ -14,6 +14,11 @@ lexer grammar PostgreSqlLexer;
 private final Deque<String> _tags = new ArrayDeque<String>();
 }
 
+tokens {
+	EscapeStringConstant,
+	UnterminatedEscapeStringConstant
+}
+
 //
 // CONSTANTS (§4.1.2)
 //
@@ -31,20 +36,8 @@ UnterminatedStringConstant
 	;
 
 // String Constants with C-style Escapes (§4.1.2.2)
-EscapeStringConstant
-	:	UnterminatedEscapeStringConstant '\''
-	;
-
-// TODO: handle this with a lexer mode so they appear in the same manner as String Constants
-UnterminatedEscapeStringConstant
-	:	[Ee] '\''
-		(	'\'\''
-		|	// Bizarre rule for line-continuations, where continuations do not require duplication of the [Ee] prefix.
-			'\'' Whitespace? (Newline Whitespace?)+ '\''
-		|	'\\\''
-		|	'\\' (~'\'' | EOF)
-		|	~['\\]
-		)*
+BeginEscapeStringConstant
+	:	[Ee] '\'' -> more, pushMode(EscapeStringConstantMode)
 	;
 
 // String Constants with Unicode Escapes (§4.1.2.3)
@@ -177,6 +170,63 @@ UnterminatedBlockComment
 ErrorCharacter
 	:	.
 	;
+
+mode EscapeStringConstantMode;
+
+	EndEscapeStringConstant
+		:	EscapeStringText '\'' -> type(EscapeStringConstant), mode(AfterEscapeStringConstantMode)
+		;
+
+	EndUnterminatedEscapeStringConstant
+		:	EscapeStringText
+			// Handle a final unmatched \ character appearing at the end of the file
+			'\\'?
+			// Optional assertion to make sure this rule is working as intended
+			{assert _input.LA(1) == EOF;}
+			-> type(UnterminatedEscapeStringConstant)
+		;
+
+	fragment
+	EscapeStringText
+		:	(	'\'\''
+			|	'\\' .
+			|	~['\\]
+			)*
+		;
+
+mode AfterEscapeStringConstantMode;
+
+	AfterEscapeStringConstantMode_Whitespace
+		:	Whitespace -> type(Whitespace)
+		;
+
+	AfterEscapeStringConstantMode_Newline
+		:	Newline -> type(Newline), mode(AfterEscapeStringConstantWithNewlineMode)
+		;
+
+	AfterEscapeStringConstantMode_NotContinued
+		:	// intentionally empty
+			-> skip, popMode
+		;
+
+mode AfterEscapeStringConstantWithNewlineMode;
+
+	AfterEscapeStringConstantWithNewlineMode_Whitespace
+		:	Whitespace -> type(Whitespace)
+		;
+
+	AfterEscapeStringConstantWithNewlineMode_Newline
+		:	Newline -> type(Newline)
+		;
+
+	AfterEscapeStringConstantWithNewlineMode_Continued
+		:	'\'' -> more, mode(EscapeStringConstantMode)
+		;
+
+	AfterEscapeStringConstantWithNewlineMode_NotContinued
+		:	// intentionally empty
+			-> skip, popMode
+		;
 
 mode DollarQuotedStringMode;
 
