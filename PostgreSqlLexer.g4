@@ -20,6 +20,24 @@ tokens {
 }
 
 //
+// SPECIAL CHARACTERS (§4.1.4)
+//
+
+// Note that Asterisk is a valid operator, but does not have the type Operator due to its syntactic use in locations
+// that are not expressions.
+
+Dollar			: '$';
+LeftParen		: '(';
+RightParen		: ')';
+LeftBracket		: '[';
+RightBracket	: ']';
+Comma			: ',';
+Semicolon		: ';';
+Colon			: ':';
+Asterisk		: '*';
+Period			: '.';
+
+//
 // OPERATORS (§4.1.3)
 //
 
