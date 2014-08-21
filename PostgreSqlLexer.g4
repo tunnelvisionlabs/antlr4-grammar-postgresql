@@ -20,6 +20,68 @@ tokens {
 }
 
 //
+// OPERATORS (§4.1.3)
+//
+
+// this rule does not allow + or - at the end of a multi-character operator
+Operator
+	:	(	OperatorCharacter
+		|	(	'+'
+			|	'-' {_input.LA(1) != '-'}?
+			)+
+			(	OperatorCharacter
+			|	'/' {_input.LA(1) != '*'}?
+			)
+		|	'/' {_input.LA(1) != '*'}?
+		)+
+	|	// special handling for the single-character operators + and -
+		[+-]
+	;
+
+/* This rule handles operators which end with + or -, and sets the token type to Operator. It is comprised of four
+ * parts, in order:
+ *
+ *   1. A prefix, which does not contain a character from the required set which allows + or - to appear at the end of
+ *      the operator.
+ *   2. A character from the required set which allows + or - to appear at the end of the operator.
+ *   3. An optional sub-token which takes the form of an operator which does not include a + or - at the end of the
+ *      sub-token.
+ *   4. A suffix sequence of + and - characters.
+ */
+OperatorEndingWithPlusMinus
+	:	(	OperatorCharacterNotAllowPlusMinusAtEnd
+		|	'-' {_input.LA(1) != '-'}?
+		|	'/' {_input.LA(1) != '*'}?
+		)*
+		OpeartorCharacterAllowPlusMinusAtEnd
+		Operator?
+		(	'+'
+		|	'-' {_input.LA(1) != '-'}?
+		)+
+		-> type(Operator)
+	;
+
+// Each of the following fragment rules omits the +, -, and / characters, which must always be handled in a special way
+// by the operator rules above.
+
+fragment
+OperatorCharacter
+	:	[*<>=~!@#%^&|`?]
+	;
+
+// these are the operator characters that don't count towards one ending with + or -
+fragment
+OperatorCharacterNotAllowPlusMinusAtEnd
+	:	[*<>=+]
+	;
+
+// an operator may end with + or - if it contains one of these characters
+fragment
+OperatorCharacterAllowPlusMinusAtEnd
+	:	[~!@#%^&|`?]
+	;
+
+//
 // CONSTANTS (§4.1.2)
 //
 
