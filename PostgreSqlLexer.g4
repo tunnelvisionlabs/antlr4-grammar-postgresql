@@ -82,6 +82,98 @@ OperatorCharacterAllowPlusMinusAtEnd
 	;
 
 //
+// IDENTIFIERS (§4.1.1)
+//
+
+Identifier
+	:	IdentifierStartChar IdentifierChar*
+	;
+
+fragment
+IdentifierStartChar
+	:	// these are the valid identifier start characters below 0x7F
+		[a-zA-Z_]
+	|	// these are the valid characters from 0x80 to 0xFF
+		[\u00AA\u00B5\u00BA\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u00FF]
+	|	// these are the letters above 0xFF which only need a single UTF-16 code unit
+		[\u0100-\uD7FF\uE000-\uFFFF] {Character.isLetter((char)_input.LA(-1))}?
+	|	// letters which require multiple UTF-16 code units
+		[\uD800-\uDBFF] [\uDC00-\uDFFF] {Character.isLetter(Character.toCodePoint((char)_input.LA(-2), (char)_input.LA(-1)))}?
+	;
+
+fragment
+IdentifierChar
+	:	StrictIdentifierChar
+	|	'$'
+	;
+
+fragment
+StrictIdentifierChar
+	:	IdentifierStartChar
+	|	[0-9]
+	;
+
+/* Quoted Identifiers
+ *
+ *   These are divided into four separate tokens, allowing distinction of valid quoted identifiers from invalid quoted
+ *   identifiers without sacrificing the ability of the lexer to reliably recover from lexical errors in the input.
+ */
+
+QuotedIdentifier
+	:	UnterminatedQuotedIdentifier '"'
+	;
+
+// This is a quoted identifier which only contains valid characters but is not terminated
+UnterminatedQuotedIdentifier
+	:	'"'
+		(	'""'
+		|	~[\u0000"]
+		)*
+	;
+
+// This is a quoted identifier which is terminated but contains a \u0000 character
+InvalidQuotedIdentifier
+	:	InvalidUnterminatedQuotedIdentifier '"'
+	;
+
+// This is a quoted identifier which is unterminated and contains a \u0000 character
+InvalidUnterminatedQuotedIdentifier
+	:	'"'
+		(	'""'
+		|	~'"'
+		)*
+	;
+
+/* Unicode Quoted Identifiers
+ *
+ *   These are divided into four separate tokens, allowing distinction of valid Unicode quoted identifiers from invalid
+ *   Unicode quoted identifiers without sacrificing the ability of the lexer to reliably recover from lexical errors in
+ *   the input. Note that escape sequences are never checked as part of this determination due to the ability of users
+ *   to change the escape character with a UESCAPE clause following the Unicode quoted identifier.
+ *
+ * TODO: these rules assume "" is still a valid escape sequence within a Unicode quoted identifier.
+ */
+
+UnicodeQuotedIdentifier
+	:	[Uu] '&'  QuotedIdentifier
+	;
+
+// This is a Unicode quoted identifier which only contains valid characters but is not terminated
+UnterminatedUnicodeQuotedIdentifier
+	:	[Uu] '&'  UnterminatedQuotedIdentifier
+	;
+
+// This is a Unicode quoted identifier which is terminated but contains a \u0000 character
+InvalidUnicodeQuotedIdentifier
+	:	[Uu] '&'  InvalidQuotedIdentifier
+	;
+
+// This is a Unicode quoted identifier which is unterminated and contains a \u0000 character
+InvalidUnterminatedUnicodeQuotedIdentifier
+	:	[Uu] '&'  InvalidUnterminatedQuotedIdentifier
+	;
+
+//
 // CONSTANTS (§4.1.2)
 //
 
