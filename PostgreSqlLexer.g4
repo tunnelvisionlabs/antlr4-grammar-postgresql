@@ -14,11 +14,6 @@ lexer grammar PostgreSqlLexer;
 private final Deque<String> _tags = new ArrayDeque<String>();
 }
 
-tokens {
-	EscapeStringConstant,
-	UnterminatedEscapeStringConstant
-}
-
 //
 // SPECIAL CHARACTERS (§4.1.4)
 //
@@ -766,21 +761,48 @@ ErrorCharacter
 
 mode EscapeStringConstantMode;
 
-	EndEscapeStringConstant
-		:	EscapeStringText '\'' -> type(EscapeStringConstant), mode(AfterEscapeStringConstantMode)
+	EscapeStringConstant
+		:	EscapeStringText '\'' -> mode(AfterEscapeStringConstantMode)
 		;
 
-	EndUnterminatedEscapeStringConstant
+	UnterminatedEscapeStringConstant
 		:	EscapeStringText
 			// Handle a final unmatched \ character appearing at the end of the file
 			'\\'?
 			// Optional assertion to make sure this rule is working as intended
 			{assert _input.LA(1) == EOF;}
-			-> type(UnterminatedEscapeStringConstant)
 		;
 
 	fragment
 	EscapeStringText
+		:	(	'\'\''
+			|	'\\'
+				(	[bfnrt]
+				|	// two- and three-digit octal escapes are still valid when treated as single-digit escapes
+					[0-7]
+				|	// two-digit hex escapes are still valid when treated as single-digit escapes
+					'x' [0-9a-fA-F]
+				|	'u' [0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F]
+				|	'U' [0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F]
+				)
+			|	~['\\]
+			)*
+		;
+
+	InvalidEscapeStringConstant
+		:	InvalidEscapeStringText '\'' -> mode(AfterEscapeStringConstantMode)
+		;
+
+	InvalidUnterminatedEscapeStringConstant
+		:	InvalidEscapeStringText
+			// Handle a final unmatched \ character appearing at the end of the file
+			'\\'?
+			// Optional assertion to make sure this rule is working as intended
+			{assert _input.LA(1) == EOF;}
+		;
+
+	fragment
+	InvalidEscapeStringText
 		:	(	'\'\''
 			|	'\\' .
 			|	~['\\]
