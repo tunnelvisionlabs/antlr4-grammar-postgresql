@@ -9,6 +9,7 @@
 package com.tunnelvisionlabs.postgresql.test;
 
 import com.tunnelvisionlabs.postgresql.PostgreSqlLexer;
+import com.tunnelvisionlabs.postgresql.PostgreSqlLexerUtils;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -28,7 +29,7 @@ public class BasicTests {
 	public void TestSampleInputs() throws IOException {
 		String input = loadSample("information_schema.sql", "UTF-8");
 
-		PostgreSqlLexer lexer = new PostgreSqlLexer(new ANTLRInputStream(input));
+		PostgreSqlLexer lexer = PostgreSqlLexerUtils.createLexer(new ANTLRInputStream(input));
 
 		CommonTokenStream tokens = new CommonTokenStream(lexer);
 		tokens.fill();
