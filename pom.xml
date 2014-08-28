@@ -39,6 +39,13 @@
   <build>
       <sourceDirectory>src</sourceDirectory>
 
+      <testSourceDirectory>test</testSourceDirectory>
+      <testResources>
+          <testResource>
+              <directory>testresources</directory>
+          </testResource>
+      </testResources>
+
       <plugins>
           <plugin>
               <groupId>org.apache.maven.plugins</groupId>
