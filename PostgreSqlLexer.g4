@@ -5,8 +5,16 @@
  *  The source code of this document is proprietary work, and is not licensed for
  *  distribution or use. For information about licensing, contact Sam Harwell at:
  *      sam@tunnelvisionlabs.com
+ *
+ *  Reference:
+ *  http://www.postgresql.org/docs/9.3/static/sql-syntax-lexical.html
  */
 lexer grammar PostgreSqlLexer;
+
+@header {
+import java.util.ArrayDeque;
+import java.util.Deque;
+}
 
 @members {
 /* This field stores the tags which are used to detect the end of a dollar-quoted string literal.
@@ -66,7 +74,7 @@ OperatorEndingWithPlusMinus
 		|	'-' {_input.LA(1) != '-'}?
 		|	'/' {_input.LA(1) != '*'}?
 		)*
-		OpeartorCharacterAllowPlusMinusAtEnd
+		OperatorCharacterAllowPlusMinusAtEnd
 		Operator?
 		(	'+'
 		|	'-' {_input.LA(1) != '-'}?
@@ -648,6 +656,14 @@ BeginDollarStringConstant
 		-> pushMode(DollarQuotedStringMode)
 	;
 
+/* "The tag, if any, of a dollar-quoted string follows the same rules as an
+ * unquoted identifier, except that it cannot contain a dollar sign."
+ */
+fragment
+Tag
+	:	IdentifierStartChar StrictIdentifierChar*
+	;
+
 // Bit-strings Constants (§4.1.2.5)
 BinaryStringConstant
 	:	UnterminatedBinaryStringConstant '\''
@@ -702,12 +718,13 @@ Digits
 //
 
 Whitespace
-	:	[ \t]+
+	:	[ \t]+ -> channel(HIDDEN)
 	;
 
 Newline
-	:	'\r' '\n'?
-	|	'\n'
+	:	(	'\r' '\n'?
+		|	'\n'
+		) -> channel(HIDDEN)
 	;
 
 //
@@ -715,18 +732,19 @@ Newline
 //
 
 LineComment
-	:	'--' ~[\r\n]*
+	:	'--' ~[\r\n]* -> channel(HIDDEN)
 	;
 
 BlockComment
-	:	'/*'
-		(	'/'* BlockComment
-		|	~[/*]
-		|	'/'+ ~[/*]
-		|	'*'+ ~[/*]
-		)*
-		'*'*
-		'*/'
+	:	(	'/*'
+			(	'/'* BlockComment
+			|	~[/*]
+			|	'/'+ ~[/*]
+			|	'*'+ ~[/*]
+			)*
+			'*'*
+			'*/'
+		) -> channel(HIDDEN)
 	;
 
 UnterminatedBlockComment
@@ -769,21 +787,20 @@ mode EscapeStringConstantMode;
 		:	EscapeStringText
 			// Handle a final unmatched \ character appearing at the end of the file
 			'\\'?
-			// Optional assertion to make sure this rule is working as intended
-			{assert _input.LA(1) == EOF;}
+			EOF
 		;
 
 	fragment
 	EscapeStringText
 		:	(	'\'\''
 			|	'\\'
-				(	[bfnrt]
-				|	// two- and three-digit octal escapes are still valid when treated as single-digit escapes
-					[0-7]
-				|	// two-digit hex escapes are still valid when treated as single-digit escapes
+				(	// two-digit hex escapes are still valid when treated as single-digit escapes
 					'x' [0-9a-fA-F]
 				|	'u' [0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F]
 				|	'U' [0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F]
+				|	// Any character other than the Unicode escapes can follow a backslash. Some have special meaning,
+					// but that doesn't affect the syntax.
+					~[xuU]
 				)
 			|	~['\\]
 			)*
@@ -797,8 +814,7 @@ mode EscapeStringConstantMode;
 		:	InvalidEscapeStringText
 			// Handle a final unmatched \ character appearing at the end of the file
 			'\\'?
-			// Optional assertion to make sure this rule is working as intended
-			{assert _input.LA(1) == EOF;}
+			EOF
 		;
 
 	fragment
@@ -820,7 +836,7 @@ mode AfterEscapeStringConstantMode;
 		;
 
 	AfterEscapeStringConstantMode_NotContinued
-		:	// intentionally empty
+		:	{} // intentionally empty
 			-> skip, popMode
 		;
 
@@ -839,7 +855,7 @@ mode AfterEscapeStringConstantWithNewlineMode;
 		;
 
 	AfterEscapeStringConstantWithNewlineMode_NotContinued
-		:	// intentionally empty
+		:	{} // intentionally empty
 			-> skip, popMode
 		;
 
@@ -854,6 +870,6 @@ mode DollarQuotedStringMode;
 
 	EndDollarStringConstant
 		:	'$' Tag? '$' {getText().equals(_tags.peek())}?
-			{_tags.pop()}
+			{_tags.pop();}
 			-> popMode
 		;
