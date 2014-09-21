@@ -767,6 +767,24 @@ UnterminatedBlockComment
 	;
 
 //
+// META-COMMANDS
+//
+
+// http://www.postgresql.org/docs/9.3/static/app-psql.html
+MetaCommand
+	:	'\\'
+		(	~[\r\n\\"]
+		|	'"' ~[\r\n"]* '"'
+		)*
+		(	'"' ~[\r\n"]*
+		)?
+	;
+
+EndMetaCommand
+	:	'\\\\'
+	;
+
+//
 // ERROR
 //
 
