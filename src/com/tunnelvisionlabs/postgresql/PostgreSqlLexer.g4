@@ -828,11 +828,11 @@ mode EscapeStringConstantMode;
 mode AfterEscapeStringConstantMode;
 
 	AfterEscapeStringConstantMode_Whitespace
-		:	Whitespace -> type(Whitespace)
+		:	Whitespace -> type(Whitespace), channel(HIDDEN)
 		;
 
 	AfterEscapeStringConstantMode_Newline
-		:	Newline -> type(Newline), mode(AfterEscapeStringConstantWithNewlineMode)
+		:	Newline -> type(Newline), channel(HIDDEN), mode(AfterEscapeStringConstantWithNewlineMode)
 		;
 
 	AfterEscapeStringConstantMode_NotContinued
@@ -843,11 +843,11 @@ mode AfterEscapeStringConstantMode;
 mode AfterEscapeStringConstantWithNewlineMode;
 
 	AfterEscapeStringConstantWithNewlineMode_Whitespace
-		:	Whitespace -> type(Whitespace)
+		:	Whitespace -> type(Whitespace), channel(HIDDEN)
 		;
 
 	AfterEscapeStringConstantWithNewlineMode_Newline
-		:	Newline -> type(Newline)
+		:	Newline -> type(Newline), channel(HIDDEN)
 		;
 
 	AfterEscapeStringConstantWithNewlineMode_Continued
