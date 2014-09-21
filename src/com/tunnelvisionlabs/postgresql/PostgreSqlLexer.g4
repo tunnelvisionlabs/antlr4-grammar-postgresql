@@ -38,7 +38,9 @@ Comma			: ',';
 Semicolon		: ';';
 Colon			: ':';
 Asterisk		: '*';
+Equal			: '=';
 Period			: '.';
+NamedArgument	: ':=';
 
 //
 // OPERATORS (§4.1.3)
